@@ -43,7 +43,7 @@ type Record struct {
 	CountryName        string
 	Region             string
 	City               string
-	Isp                string
+	ISP                string
 	Latitude           float32
 	Longitude          float32
 	Domain             string
@@ -312,107 +312,107 @@ func NewDB(r io.ReaderAt) (*DB, error) {
 }
 
 // get all fields
-func (db *DB) GetAll(ipaddress string) (Record, error) {
+func (db *DB) All(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, all)
 }
 
 // get country code
-func (db *DB) GetCountryShort(ipaddress string) (Record, error) {
+func (db *DB) CountryCode(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, countryshort)
 }
 
 // get country name
-func (db *DB) GetCountryLong(ipaddress string) (Record, error) {
+func (db *DB) CountryName(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, countrylong)
 }
 
 // get region
-func (db *DB) GetRegion(ipaddress string) (Record, error) {
+func (db *DB) Region(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, region)
 }
 
 // get city
-func (db *DB) GetCity(ipaddress string) (Record, error) {
+func (db *DB) City(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, city)
 }
 
 // get isp
-func (db *DB) GetIsp(ipaddress string) (Record, error) {
+func (db *DB) ISP(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, isp)
 }
 
 // get latitude
-func (db *DB) GetLatitude(ipaddress string) (Record, error) {
+func (db *DB) Latitude(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, latitude)
 }
 
 // get longitude
-func (db *DB) GetLongitude(ipaddress string) (Record, error) {
+func (db *DB) Longitude(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, longitude)
 }
 
 // get domain
-func (db *DB) GetDomain(ipaddress string) (Record, error) {
+func (db *DB) Domain(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, domain)
 }
 
 // get zip code
-func (db *DB) GetZipcode(ipaddress string) (Record, error) {
+func (db *DB) ZipCode(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, zipcode)
 }
 
 // get time zone
-func (db *DB) GetTimezone(ipaddress string) (Record, error) {
+func (db *DB) Timezone(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, timezone)
 }
 
 // get net speed
-func (db *DB) GetNetspeed(ipaddress string) (Record, error) {
+func (db *DB) Netspeed(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, netspeed)
 }
 
 // get idd code
-func (db *DB) GetIddcode(ipaddress string) (Record, error) {
+func (db *DB) IDDCode(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, iddcode)
 }
 
 // get area code
-func (db *DB) GetAreacode(ipaddress string) (Record, error) {
+func (db *DB) AreaCode(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, areacode)
 }
 
 // get weather station code
-func (db *DB) GetWeatherstationcode(ipaddress string) (Record, error) {
+func (db *DB) WeatherStationCode(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, weatherstationcode)
 }
 
 // get weather station name
-func (db *DB) GetWeatherstationname(ipaddress string) (Record, error) {
+func (db *DB) WeatherStationName(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, weatherstationname)
 }
 
 // get mobile country code
-func (db *DB) GetMcc(ipaddress string) (Record, error) {
+func (db *DB) MCC(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, mcc)
 }
 
 // get mobile network code
-func (db *DB) GetMnc(ipaddress string) (Record, error) {
+func (db *DB) MNC(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, mnc)
 }
 
 // get mobile carrier brand
-func (db *DB) GetMobilebrand(ipaddress string) (Record, error) {
+func (db *DB) Mobilebrand(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, mobilebrand)
 }
 
 // get elevation
-func (db *DB) GetElevation(ipaddress string) (Record, error) {
+func (db *DB) Elevation(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, elevation)
 }
 
 // get usage type
-func (db *DB) GetUsageType(ipaddress string) (Record, error) {
+func (db *DB) UsageType(ipaddress string) (Record, error) {
 	return db.Query(ipaddress, usagetype)
 }
 
@@ -523,7 +523,7 @@ func (db *DB) Query(ipaddress string, mode QueryMode) (x Record, err error) {
 			case city:
 				x.City, err = rStr(db.r, pos)
 			case isp:
-				x.Isp, err = rStr(db.r, pos)
+				x.ISP, err = rStr(db.r, pos)
 			case latitude:
 				x.Latitude, err = rFloat(db.r, pos)
 			case longitude:
@@ -573,7 +573,7 @@ func (x Record) Print() {
 	fmt.Printf("country_long: %s\n", x.CountryName)
 	fmt.Printf("region: %s\n", x.Region)
 	fmt.Printf("city: %s\n", x.City)
-	fmt.Printf("isp: %s\n", x.Isp)
+	fmt.Printf("isp: %s\n", x.ISP)
 	fmt.Printf("latitude: %f\n", x.Latitude)
 	fmt.Printf("longitude: %f\n", x.Longitude)
 	fmt.Printf("domain: %s\n", x.Domain)
