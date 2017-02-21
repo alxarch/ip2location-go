@@ -75,6 +75,7 @@ var (
 	NotSupportedError           = errors.New("This parameter is unavailable for selected data file. Please upgrade the data file.")
 	InvalidAddressError         = errors.New("Invalid IP address.")
 	UnsupportedAddressTypeError = errors.New("Unsupported IP address type.")
+	NoMatchError                = errors.New("No matching IP range found.")
 )
 
 func NewDB(r io.ReaderAt) (db *DB, err error) {
@@ -141,7 +142,6 @@ func (db *DB) query(ip *big.Int, ipt IPType, index uint32, x *Record, mode Query
 	if !db.meta.Has(ipt) {
 		return UnsupportedAddressTypeError
 	}
-
 	base, high, colsize, maxip := db.meta.Indexes(ipt)
 	var low, mid uint32
 	var ipfrom, ipto *big.Int
@@ -264,6 +264,30 @@ func (db *DB) query(ip *big.Int, ipt IPType, index uint32, x *Record, mode Query
 			}
 		}
 		return nil
+	}
+	return NoMatchError
+}
+
+type MultiDB []*DB
+
+func (md MultiDB) Query(ip string, r *Record, mode QueryMode) error {
+	matches := 0
+	var lasterr error
+	for _, db := range md {
+		if err := db.Query(ip, r, mode); err != nil {
+			switch err {
+			case NotSupportedError, UnsupportedAddressTypeError, NoMatchError:
+				lasterr = err
+			default:
+				return err
+			}
+		} else {
+			matches++
+
+		}
+	}
+	if matches == 0 {
+		return lasterr
 	}
 	return nil
 }
