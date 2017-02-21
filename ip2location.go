@@ -20,18 +20,20 @@ type DB struct {
 }
 
 type meta struct {
-	dbtype    uint8
-	column    uint8
-	date      time.Time
-	ipv4count uint32
-	ipv4addr  uint32
-	ipv6count uint32
-	ipv6addr  uint32
-	ipv4index uint32
-	ipv6index uint32
-	ipv4col   uint32
-	ipv6col   uint32
-	ok        bool
+	dbtype     uint8
+	column     uint8
+	date       time.Time
+	ipv4count  uint32
+	ipv4addr   uint32
+	ipv6count  uint32
+	ipv6addr   uint32
+	ipv4index  uint32
+	ipv6index  uint32
+	ipv4col    uint32
+	ipv6col    uint32
+	ipv4bigidx *big.Int
+	ipv6bigidx *big.Int
+	ok         bool
 }
 
 func (m meta) Date() time.Time {
@@ -47,43 +49,43 @@ type Record struct {
 	Latitude           float32
 	Longitude          float32
 	Domain             string
-	Zipcode            string
+	ZipCode            string
 	Timezone           string
-	Netspeed           string
-	Iddcode            string
+	NetSpeed           string
+	IDDCode            string
 	Areacode           string
-	Weatherstationcode string
-	Weatherstationname string
-	Mcc                string
-	Mnc                string
-	Mobilebrand        string
+	WeatherStationCode string
+	WeatherStationName string
+	MCC                string
+	MNC                string
+	MobileBrand        string
 	Elevation          float64
-	Usagetype          string
+	UsageType          string
 }
 
 type dbOffsetMap [25]uint8
 
 var offsetMaps = map[QueryMode]dbOffsetMap{
-	countryshort:       dbOffsetMap{0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	countrylong:        dbOffsetMap{0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-	region:             dbOffsetMap{0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
-	city:               dbOffsetMap{0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4},
-	isp:                dbOffsetMap{0, 0, 3, 0, 5, 0, 7, 5, 7, 0, 8, 0, 9, 0, 9, 0, 9, 0, 9, 7, 9, 0, 9, 7, 9},
-	latitude:           dbOffsetMap{0, 0, 0, 0, 0, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5},
-	longitude:          dbOffsetMap{0, 0, 0, 0, 0, 6, 6, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6},
-	domain:             dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 6, 8, 0, 9, 0, 10, 0, 10, 0, 10, 0, 10, 8, 10, 0, 10, 8, 10},
-	zipcode:            dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 0, 7, 7, 7, 0, 7, 0, 7, 7, 7, 0, 7},
-	timezone:           dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 7, 8, 8, 8, 7, 8, 0, 8, 8, 8, 0, 8},
-	netspeed:           dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 11, 0, 11, 8, 11, 0, 11, 0, 11, 0, 11},
-	iddcode:            dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 12, 0, 12, 0, 12, 9, 12, 0, 12},
-	areacode:           dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 13, 0, 13, 0, 13, 10, 13, 0, 13},
-	weatherstationcode: dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 14, 0, 14, 0, 14, 0, 14},
-	weatherstationname: dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 15, 0, 15, 0, 15, 0, 15},
-	mcc:                dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 16, 0, 16, 9, 16},
-	mnc:                dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 17, 0, 17, 10, 17},
-	mobilebrand:        dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 18, 0, 18, 11, 18},
-	elevation:          dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 19, 0, 19},
-	usagetype:          dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20},
+	QueryCountryCode:        dbOffsetMap{0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+	QueryCountryName:        dbOffsetMap{0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+	QueryRegion:             dbOffsetMap{0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
+	QueryCity:               dbOffsetMap{0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4},
+	QueryISP:                dbOffsetMap{0, 0, 3, 0, 5, 0, 7, 5, 7, 0, 8, 0, 9, 0, 9, 0, 9, 0, 9, 7, 9, 0, 9, 7, 9},
+	QueryLatitude:           dbOffsetMap{0, 0, 0, 0, 0, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5},
+	QueryLongitude:          dbOffsetMap{0, 0, 0, 0, 0, 6, 6, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6},
+	QueryDomain:             dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 6, 8, 0, 9, 0, 10, 0, 10, 0, 10, 0, 10, 8, 10, 0, 10, 8, 10},
+	QueryZipCode:            dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 0, 7, 7, 7, 0, 7, 0, 7, 7, 7, 0, 7},
+	QueryTimeZone:           dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 7, 8, 8, 8, 7, 8, 0, 8, 8, 8, 0, 8},
+	QueryNetSpeed:           dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 11, 0, 11, 8, 11, 0, 11, 0, 11, 0, 11},
+	QueryIDDCode:            dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 12, 0, 12, 0, 12, 9, 12, 0, 12},
+	QueryAreaCode:           dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 13, 0, 13, 0, 13, 10, 13, 0, 13},
+	QueryWeatherStationCode: dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 14, 0, 14, 0, 14, 0, 14},
+	QueryWeatherStationName: dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 15, 0, 15, 0, 15, 0, 15},
+	QueryMCC:                dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 16, 0, 16, 9, 16},
+	QueryMNC:                dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 17, 0, 17, 10, 17},
+	QueryMobileBrand:        dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 18, 0, 18, 11, 18},
+	QueryElevation:          dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 19, 0, 19},
+	QueryUsageType:          dbOffsetMap{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20},
 }
 
 var (
@@ -111,27 +113,27 @@ func init() {
 type QueryMode uint32
 
 const (
-	countryshort       QueryMode = 0x00001
-	countrylong        QueryMode = 0x00002
-	region             QueryMode = 0x00004
-	city               QueryMode = 0x00008
-	isp                QueryMode = 0x00010
-	latitude           QueryMode = 0x00020
-	longitude          QueryMode = 0x00040
-	domain             QueryMode = 0x00080
-	zipcode            QueryMode = 0x00100
-	timezone           QueryMode = 0x00200
-	netspeed           QueryMode = 0x00400
-	iddcode            QueryMode = 0x00800
-	areacode           QueryMode = 0x01000
-	weatherstationcode QueryMode = 0x02000
-	weatherstationname QueryMode = 0x04000
-	mcc                QueryMode = 0x08000
-	mnc                QueryMode = 0x10000
-	mobilebrand        QueryMode = 0x20000
-	elevation          QueryMode = 0x40000
-	usagetype          QueryMode = 0x80000
-	all                QueryMode = countryshort | countrylong | region | city | isp | latitude | longitude | domain | zipcode | timezone | netspeed | iddcode | areacode | weatherstationcode | weatherstationname | mcc | mnc | mobilebrand | elevation | usagetype
+	QueryCountryCode        QueryMode = 0x00001
+	QueryCountryName        QueryMode = 0x00002
+	QueryRegion             QueryMode = 0x00004
+	QueryCity               QueryMode = 0x00008
+	QueryISP                QueryMode = 0x00010
+	QueryLatitude           QueryMode = 0x00020
+	QueryLongitude          QueryMode = 0x00040
+	QueryDomain             QueryMode = 0x00080
+	QueryZipCode            QueryMode = 0x00100
+	QueryTimeZone           QueryMode = 0x00200
+	QueryNetSpeed           QueryMode = 0x00400
+	QueryIDDCode            QueryMode = 0x00800
+	QueryAreaCode           QueryMode = 0x01000
+	QueryWeatherStationCode QueryMode = 0x02000
+	QueryWeatherStationName QueryMode = 0x04000
+	QueryMCC                QueryMode = 0x08000
+	QueryMNC                QueryMode = 0x10000
+	QueryMobileBrand        QueryMode = 0x20000
+	QueryElevation          QueryMode = 0x40000
+	QueryUsageType          QueryMode = 0x80000
+	QueryAll                QueryMode = QueryCountryCode | QueryCountryName | QueryRegion | QueryCity | QueryISP | QueryLatitude | QueryLongitude | QueryDomain | QueryZipCode | QueryTimeZone | QueryNetSpeed | QueryIDDCode | QueryAreaCode | QueryWeatherStationCode | QueryWeatherStationName | QueryMCC | QueryMNC | QueryMobileBrand | QueryElevation | QueryUsageType
 )
 
 type IPType uint32
@@ -142,7 +144,7 @@ const (
 )
 
 // get IP type and calculate IP number; calculates index too if exists
-func (db *DB) CheckIP(ip string) (iptype IPType, ipnum *big.Int, ipindex uint32) {
+func (db *DB) CheckIP(ip string) (iptype IPType, ipnum *big.Int, ipindex uint64) {
 	iptype = 0
 	ipnum = big.NewInt(0)
 	tmp := big.NewInt(0)
@@ -154,7 +156,7 @@ func (db *DB) CheckIP(ip string) (iptype IPType, ipnum *big.Int, ipindex uint32)
 			if db.meta.ipv4index > 0 {
 				tmp.Rsh(ipnum, 16)
 				tmp.Lsh(tmp, 3)
-				ipindex = uint32(tmp.Add(tmp, big.NewInt(int64(db.meta.ipv4index))).Uint64())
+				ipindex = tmp.Add(tmp, db.meta.ipv4bigidx).Uint64()
 			}
 		} else if v6 := ipaddress.To16(); v6 != nil {
 			iptype = IPv6
@@ -162,7 +164,7 @@ func (db *DB) CheckIP(ip string) (iptype IPType, ipnum *big.Int, ipindex uint32)
 			if db.meta.ipv6index > 0 {
 				tmp.Rsh(ipnum, 112)
 				tmp.Lsh(tmp, 3)
-				ipindex = uint32(tmp.Add(tmp, big.NewInt(int64(db.meta.ipv6index))).Uint64())
+				ipindex = tmp.Add(tmp, db.meta.ipv6bigidx).Uint64()
 			}
 		}
 	}
@@ -294,6 +296,8 @@ func NewDB(r io.ReaderAt) (*DB, error) {
 	if db.meta.ipv6index, err = rUint32(db.r, 26); err != nil {
 		return nil, err
 	}
+	db.meta.ipv4bigidx = big.NewInt(int64(db.meta.ipv4index))
+	db.meta.ipv6bigidx = big.NewInt(int64(db.meta.ipv6index))
 	db.meta.ipv4col = uint32(db.meta.column << 2)              // 4 bytes each column
 	db.meta.ipv6col = uint32(16 + ((db.meta.column - 1) << 2)) // 4 bytes each column, except IPFrom column which is 16 bytes
 
@@ -311,111 +315,6 @@ func NewDB(r io.ReaderAt) (*DB, error) {
 	return db, nil
 }
 
-// get all fields
-func (db *DB) All(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, all)
-}
-
-// get country code
-func (db *DB) CountryCode(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, countryshort)
-}
-
-// get country name
-func (db *DB) CountryName(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, countrylong)
-}
-
-// get region
-func (db *DB) Region(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, region)
-}
-
-// get city
-func (db *DB) City(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, city)
-}
-
-// get isp
-func (db *DB) ISP(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, isp)
-}
-
-// get latitude
-func (db *DB) Latitude(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, latitude)
-}
-
-// get longitude
-func (db *DB) Longitude(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, longitude)
-}
-
-// get domain
-func (db *DB) Domain(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, domain)
-}
-
-// get zip code
-func (db *DB) ZipCode(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, zipcode)
-}
-
-// get time zone
-func (db *DB) Timezone(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, timezone)
-}
-
-// get net speed
-func (db *DB) Netspeed(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, netspeed)
-}
-
-// get idd code
-func (db *DB) IDDCode(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, iddcode)
-}
-
-// get area code
-func (db *DB) AreaCode(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, areacode)
-}
-
-// get weather station code
-func (db *DB) WeatherStationCode(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, weatherstationcode)
-}
-
-// get weather station name
-func (db *DB) WeatherStationName(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, weatherstationname)
-}
-
-// get mobile country code
-func (db *DB) MCC(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, mcc)
-}
-
-// get mobile network code
-func (db *DB) MNC(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, mnc)
-}
-
-// get mobile carrier brand
-func (db *DB) Mobilebrand(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, mobilebrand)
-}
-
-// get elevation
-func (db *DB) Elevation(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, elevation)
-}
-
-// get usage type
-func (db *DB) UsageType(ipaddress string) (Record, error) {
-	return db.Query(ipaddress, usagetype)
-}
-
 var bigOne = big.NewInt(1)
 
 // main Query
@@ -428,11 +327,7 @@ func (db *DB) Query(ipaddress string, mode QueryMode) (x Record, err error) {
 	// check IP type and return IP number & index (if exists)
 	iptype, ipno, ipindex := db.CheckIP(ipaddress)
 
-	if iptype == 0 {
-		return x, InvalidAddressError
-	}
-
-	var colsize, baseaddr, low, high, mid, rowoffset uint32
+	var colsize, baseaddr, low, high, mid uint32
 	var ipfrom, ipto, maxip *big.Int
 
 	switch iptype {
@@ -455,7 +350,7 @@ func (db *DB) Query(ipaddress string, mode QueryMode) (x Record, err error) {
 		if low, err = rUint32(db.r, int64(ipindex)); err != nil {
 			return
 		}
-		if high, err = rUint32(db.r, int64(ipindex+4)); err != nil {
+		if high, err = rUint32(db.r, int64(ipindex)+4); err != nil {
 			return
 		}
 	}
@@ -466,9 +361,9 @@ func (db *DB) Query(ipaddress string, mode QueryMode) (x Record, err error) {
 
 	var pos int64
 	for low <= high {
-		mid = ((low + high) >> 1)
+		mid = ((low + high) >> 1) // (low + high) / 2
 		o1 := int64(baseaddr + (mid * colsize))
-		o2 := int64(rowoffset + colsize)
+		o2 := o1 + int64(colsize)
 
 		switch iptype {
 		case IPv4:
@@ -514,45 +409,45 @@ func (db *DB) Query(ipaddress string, mode QueryMode) (x Record, err error) {
 			pos += o1
 
 			switch m {
-			case countrylong:
+			case QueryCountryName:
 				x.CountryName, err = rStr(db.r, pos+3)
-			case countryshort:
+			case QueryCountryCode:
 				x.CountryCode, err = rStr(db.r, pos)
-			case region:
+			case QueryRegion:
 				x.Region, err = rStr(db.r, pos)
-			case city:
+			case QueryCity:
 				x.City, err = rStr(db.r, pos)
-			case isp:
+			case QueryISP:
 				x.ISP, err = rStr(db.r, pos)
-			case latitude:
+			case QueryLatitude:
 				x.Latitude, err = rFloat(db.r, pos)
-			case longitude:
+			case QueryLongitude:
 				x.Longitude, err = rFloat(db.r, pos)
-			case domain:
+			case QueryDomain:
 				x.Domain, err = rStr(db.r, pos)
-			case zipcode:
-				x.Zipcode, err = rStr(db.r, pos)
-			case timezone:
+			case QueryZipCode:
+				x.ZipCode, err = rStr(db.r, pos)
+			case QueryTimeZone:
 				x.Timezone, err = rStr(db.r, pos)
-			case netspeed:
-				x.Netspeed, err = rStr(db.r, pos)
-			case iddcode:
-				x.Iddcode, err = rStr(db.r, pos)
-			case areacode:
+			case QueryNetSpeed:
+				x.NetSpeed, err = rStr(db.r, pos)
+			case QueryIDDCode:
+				x.IDDCode, err = rStr(db.r, pos)
+			case QueryAreaCode:
 				x.Areacode, err = rStr(db.r, pos)
-			case weatherstationcode:
-				x.Weatherstationcode, err = rStr(db.r, pos)
-			case weatherstationname:
-				x.Weatherstationname, err = rStr(db.r, pos)
-			case mcc:
-				x.Mcc, err = rStr(db.r, pos)
-			case mnc:
-				x.Mnc, err = rStr(db.r, pos)
-			case mobilebrand:
-				x.Mobilebrand, err = rStr(db.r, pos)
-			case usagetype:
-				x.Usagetype, err = rStr(db.r, pos)
-			case elevation:
+			case QueryWeatherStationCode:
+				x.WeatherStationCode, err = rStr(db.r, pos)
+			case QueryWeatherStationName:
+				x.WeatherStationName, err = rStr(db.r, pos)
+			case QueryMCC:
+				x.MCC, err = rStr(db.r, pos)
+			case QueryMNC:
+				x.MNC, err = rStr(db.r, pos)
+			case QueryMobileBrand:
+				x.MobileBrand, err = rStr(db.r, pos)
+			case QueryUsageType:
+				x.UsageType, err = rStr(db.r, pos)
+			case QueryElevation:
 				var s string
 				if s, err = rStr(db.r, pos); err == nil {
 					x.Elevation, err = strconv.ParseFloat(s, 32)
@@ -571,22 +466,22 @@ func (db *DB) Query(ipaddress string, mode QueryMode) (x Record, err error) {
 func (x Record) Print() {
 	fmt.Printf("country_short: %s\n", x.CountryCode)
 	fmt.Printf("country_long: %s\n", x.CountryName)
-	fmt.Printf("region: %s\n", x.Region)
-	fmt.Printf("city: %s\n", x.City)
-	fmt.Printf("isp: %s\n", x.ISP)
-	fmt.Printf("latitude: %f\n", x.Latitude)
-	fmt.Printf("longitude: %f\n", x.Longitude)
-	fmt.Printf("domain: %s\n", x.Domain)
-	fmt.Printf("zipcode: %s\n", x.Zipcode)
+	fmt.Printf("QueryRegion: %s\n", x.Region)
+	fmt.Printf("QueryCity: %s\n", x.City)
+	fmt.Printf("QueryISP: %s\n", x.ISP)
+	fmt.Printf("QueryLatitude: %f\n", x.Latitude)
+	fmt.Printf("QueryLongitude: %f\n", x.Longitude)
+	fmt.Printf("QueryDomain: %s\n", x.Domain)
+	fmt.Printf("QueryZipCodeQueryTimeZone %s\n", x.ZipCode)
 	fmt.Printf("timezone: %s\n", x.Timezone)
-	fmt.Printf("netspeed: %s\n", x.Netspeed)
-	fmt.Printf("iddcode: %s\n", x.Iddcode)
-	fmt.Printf("areacode: %s\n", x.Areacode)
-	fmt.Printf("weatherstationcode: %s\n", x.Weatherstationcode)
-	fmt.Printf("weatherstationname: %s\n", x.Weatherstationname)
-	fmt.Printf("mcc: %s\ncheckip", x.Mcc)
-	fmt.Printf("mnc: %s\n", x.Mnc)
-	fmt.Printf("mobilebrand: %s\n", x.Mobilebrand)
-	fmt.Printf("elevation: %f\n", x.Elevation)
-	fmt.Printf("usagetype: %s\n", x.Usagetype)
+	fmt.Printf("QueryNetSpeed: %s\n", x.NetSpeed)
+	fmt.Printf("QueryIDDCode: %s\n", x.IDDCode)
+	fmt.Printf("QueryAreaCode: %s\n", x.Areacode)
+	fmt.Printf("QueryWeatherStationCode: %s\n", x.WeatherStationCode)
+	fmt.Printf("QueryWeatherStationName: %s\n", x.WeatherStationName)
+	fmt.Printf("QueryMCC: %s\ncheckip", x.MCC)
+	fmt.Printf("QueryMNC: %s\n", x.MNC)
+	fmt.Printf("QueryMobileBrand: %s\n", x.MobileBrand)
+	fmt.Printf("QueryElevation: %f\n", x.Elevation)
+	fmt.Printf("QueryUsageType: %s\n", x.UsageType)
 }
