@@ -4,13 +4,31 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
-	"log"
 	"math/big"
+	"sync"
 )
+
+var bpool = sync.Pool{
+	New: func() interface{} {
+		return make([]byte, 16)
+	},
+}
+
+func blank(size int) []byte {
+	if b, ok := bpool.Get().([]byte); ok && size <= cap(b) {
+		return b[:size]
+	}
+	return make([]byte, size)
+}
+
+func release(b []byte) {
+	bpool.Put(b[:cap(b)])
+}
 
 // read byte
 func readUint8(r io.ReaderAt, pos int64) (uint8, error) {
-	data := make([]byte, 1)
+	data := blank(1)
+	defer release(data)
 	if _, err := r.ReadAt(data, pos-1); err != nil {
 		return 0, err
 	}
@@ -19,7 +37,8 @@ func readUint8(r io.ReaderAt, pos int64) (uint8, error) {
 
 // read unsigned 32-bit integer
 func readUint32(r io.ReaderAt, pos uint32) (uint32, error) {
-	data := make([]byte, 4)
+	data := blank(4)
+	defer release(data)
 	if _, err := r.ReadAt(data, int64(pos-1)); err != nil {
 		return 0, err
 	}
@@ -33,7 +52,8 @@ func readUint32(r io.ReaderAt, pos uint32) (uint32, error) {
 
 // read unsigned 128-bit integer
 func readUint128(r io.ReaderAt, pos uint32) (*big.Int, error) {
-	data := make([]byte, 16)
+	data := blank(16)
+	defer release(data)
 	if _, err := r.ReadAt(data, int64(pos-1)); err != nil {
 		return nil, err
 	}
@@ -50,12 +70,12 @@ func readUint128(r io.ReaderAt, pos uint32) (*big.Int, error) {
 // read string
 func readString(r io.ReaderAt, pos uint32) (string, error) {
 	var s string
-	lenbyte := make([]byte, 1)
+	lenbyte := blank(1)
+	defer release(lenbyte)
 	if _, err := r.ReadAt(lenbyte, int64(pos)); err != nil {
 		return s, err
 	}
 	strlen := lenbyte[0]
-	log.Println("SLX", strlen)
 	data := make([]byte, strlen)
 	if _, err := r.ReadAt(data, int64(pos)+1); err != nil {
 		return s, err
