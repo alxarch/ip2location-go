@@ -89,7 +89,7 @@ func readDbDate(r io.ReaderAt) (t time.Time, err error) {
 	if d, err = readUint8(r, 5); err != nil {
 		return
 	}
-	t = time.Date(int(y)-1+2000, time.Month(int(m))-1, int(d)-1, 0, 0, 0, 0, time.UTC)
+	t = time.Date(int(y)+2000, time.Month(int(m)), int(d), 0, 0, 0, 0, time.UTC)
 	return
 }
 func (m *DBMeta) Read(r io.ReaderAt) (err error) {
