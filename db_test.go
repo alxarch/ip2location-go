@@ -40,12 +40,13 @@ func Test_NewDB(t *testing.T) {
 	if err != nil {
 		t.Error("Failed to init db %s", err)
 	}
-	ip, ipt, idx := db.CheckIP("127.0.0.1")
+	if db == nil {
+		t.Error("Failed to init db %s", err)
+
+	}
+	ip, ipt := ip2loc.ParseIP("127.0.0.1")
 	if ipt != ip2loc.IPv4 {
 		t.Error("Invalid ip type")
-	}
-	if idx == 0 {
-		t.Error("Invalid ip index %d", idx)
 	}
 	if ip.Int64() <= 0 {
 		t.Error("Invalid ip number")

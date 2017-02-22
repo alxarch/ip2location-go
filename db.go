@@ -5,7 +5,6 @@ import (
 	"io"
 	"math/big"
 	"net"
-	"os"
 	"strconv"
 )
 
@@ -117,7 +116,7 @@ func (db *DB) Index(ip *big.Int, t IPType) uint32 {
 }
 
 // get IP type and calculate IP number; calculates index too if exists
-func (db *DB) CheckIP(ips string) (ip *big.Int, ipt IPType, index uint32) {
+func ParseIP(ips string) (ip *big.Int, ipt IPType) {
 	ip = big.NewInt(0)
 	if a := net.ParseIP(ips); a != nil {
 		if v4 := a.To4(); v4 != nil {
@@ -127,37 +126,70 @@ func (db *DB) CheckIP(ips string) (ip *big.Int, ipt IPType, index uint32) {
 			ipt = IPv6
 			ip.SetBytes(v6)
 		}
-		index = db.Index(ip, ipt)
 	}
 	return
+}
+func (db *DB) Lookup(ip *big.Int, t IPType) (lo, hi uint32) {
+	var idx uint32
+	switch t {
+	case IPv4:
+		lo = db.meta.ipv4addr
+		hi = db.meta.ipv4count * db.meta.ipv4colsize
+		if db.meta.ipv4index > 0 {
+			tmp := big.NewInt(0)
+			tmp.Rsh(ip, 16)
+			tmp.Lsh(tmp, 3)
+			idx = uint32(tmp.Add(tmp, db.meta.ipv4bigidx).Uint64())
+			if pos, err := readUint32(db.r, idx); err == nil {
+				lo = pos
+			}
+			if pos, err := readUint32(db.r, idx+4); err == nil {
+				hi = pos
+			}
+		}
+	case IPv6:
+		lo = db.meta.ipv6addr
+		hi = db.meta.ipv6count * db.meta.ipv6colsize
+
+		if db.meta.ipv4index > 0 {
+			tmp := big.NewInt(0)
+			tmp.Rsh(ip, 112)
+			tmp.Lsh(tmp, 3)
+			idx = uint32(tmp.Add(tmp, db.meta.ipv6bigidx).Uint64())
+		}
+	default:
+		return
+	}
+	if idx > 0 {
+		if pos, err := readUint32(db.r, idx); err == nil {
+			lo = pos
+		}
+		if pos, err := readUint32(db.r, idx+4); err == nil {
+			hi = pos
+		}
+	}
+	return
+
 }
 
 // main Query
 func (db *DB) Query(ipaddress string, x *Record, mode QueryMode) (err error) {
 	// check IP type and return IP number & index (if exists)
-	ip, t, index := db.CheckIP(ipaddress)
-	return db.query(ip, t, index, x, mode)
+	ip, t := ParseIP(ipaddress)
+	return db.query(ip, t, x, mode)
 }
-func (db *DB) query(ip *big.Int, ipt IPType, index uint32, x *Record, mode QueryMode) (err error) {
+
+func (db *DB) query(ip *big.Int, ipt IPType, x *Record, mode QueryMode) (err error) {
 	if mode&db.mode == 0 {
 		return NotSupportedError
 	}
 	if !db.meta.Has(ipt) {
 		return UnsupportedAddressTypeError
 	}
-	base, high, colsize, maxip := db.meta.Indexes(ipt)
-	var low, mid uint32
+	base, _, colsize, maxip := db.meta.Indexes(ipt)
+	var mid uint32
 	var ipfrom, ipto *big.Int
-
-	// reading index
-	if index > 0 {
-		if low, err = readUint32(db.r, uint32(index)); err != nil {
-			return
-		}
-		if high, err = readUint32(db.r, index+4); err != nil {
-			return
-		}
-	}
+	low, high := db.Lookup(ip, ipt)
 
 	if ip.Cmp(maxip) >= 0 {
 		ip = ip.Sub(ip, bigOne)
@@ -274,54 +306,4 @@ func (db *DB) query(ip *big.Int, ipt IPType, index uint32, x *Record, mode Query
 type IP2LocationDB interface {
 	Query(string, *Record, QueryMode) error
 	Close()
-}
-
-type MultiDB []IP2LocationDB
-
-func (md MultiDB) Close() {
-	for _, db := range md {
-		db.Close()
-	}
-}
-
-func (md MultiDB) Query(ip string, r *Record, mode QueryMode) error {
-	matches := 0
-	var lasterr error
-	for _, db := range md {
-		if err := db.Query(ip, r, mode); err != nil {
-			switch err {
-			case NotSupportedError, UnsupportedAddressTypeError, NoMatchError:
-				lasterr = err
-			default:
-				return err
-			}
-		} else {
-			matches++
-
-		}
-	}
-	if matches == 0 {
-		return lasterr
-	}
-	return nil
-}
-
-type FileDB struct {
-	f  *os.File
-	db *DB
-}
-
-func NewFileDB(path string) (IP2LocationDB, error) {
-	if f, err := os.Open(path); err != nil {
-		return nil, err
-	} else {
-		return &DB{r: f}, nil
-	}
-
-}
-
-func (fdb *FileDB) Close() {
-	if fdb.f != nil {
-		fdb.f.Close()
-	}
 }
