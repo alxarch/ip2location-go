@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/big"
 	"net"
+	"os"
 	"strconv"
 )
 
@@ -96,6 +97,8 @@ func NewDB(r io.ReaderAt) (db *DB, err error) {
 
 	return db, nil
 }
+
+func (db *DB) Close() {}
 
 func (db *DB) Index(ip *big.Int, t IPType) uint32 {
 	switch t {
@@ -268,7 +271,18 @@ func (db *DB) query(ip *big.Int, ipt IPType, index uint32, x *Record, mode Query
 	return NoMatchError
 }
 
-type MultiDB []*DB
+type IP2LocationDB interface {
+	Query(string, *Record, QueryMode) error
+	Close()
+}
+
+type MultiDB []IP2LocationDB
+
+func (md MultiDB) Close() {
+	for _, db := range md {
+		db.Close()
+	}
+}
 
 func (md MultiDB) Query(ip string, r *Record, mode QueryMode) error {
 	matches := 0
@@ -290,4 +304,24 @@ func (md MultiDB) Query(ip string, r *Record, mode QueryMode) error {
 		return lasterr
 	}
 	return nil
+}
+
+type FileDB struct {
+	f  *os.File
+	db *DB
+}
+
+func NewFileDB(path string) (IP2LocationDB, error) {
+	if f, err := os.Open(path); err != nil {
+		return nil, err
+	} else {
+		return &DB{r: f}, nil
+	}
+
+}
+
+func (fdb *FileDB) Close() {
+	if fdb.f != nil {
+		fdb.f.Close()
+	}
 }

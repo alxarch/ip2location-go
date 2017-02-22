@@ -2,10 +2,6 @@ package ip2location
 
 import "errors"
 
-type IPQueryProvider interface {
-	Query(string, *Record, QueryMode) error
-}
-
 type request struct {
 	Mode   QueryMode
 	IP     string
@@ -13,14 +9,14 @@ type request struct {
 }
 
 type SafeDB struct {
-	db IPQueryProvider
+	db IP2LocationDB
 
 	done      chan struct{}
 	requests  chan request
 	responses chan error
 }
 
-func NewSafeDB(db IPQueryProvider) *SafeDB {
+func NewSafeDB(db IP2LocationDB) *SafeDB {
 	if nil == db {
 		return nil
 	}
@@ -33,6 +29,7 @@ func NewSafeDB(db IPQueryProvider) *SafeDB {
 	go func() {
 		defer close(sd.requests)
 		defer close(sd.responses)
+		defer sd.Close()
 		for {
 			select {
 			case <-sd.done:
@@ -49,6 +46,9 @@ func NewSafeDB(db IPQueryProvider) *SafeDB {
 func (d *SafeDB) Close() {
 	if nil != d.done {
 		close(d.done)
+	}
+	if nil != d.db {
+		d.db.Close()
 	}
 }
 
