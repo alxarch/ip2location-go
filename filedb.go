@@ -3,7 +3,9 @@ package ip2location
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
+	"strings"
 	"syscall"
 )
 
@@ -25,11 +27,39 @@ func (fdb *FileDB) Close() {
 
 }
 
+func NewDirDB(path string, mmap bool) (IP2LocationDB, error) {
+	entries, err := ioutil.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	dbs := MultiDB{}
+	for _, entry := range entries {
+		p := path + string(os.PathSeparator) + entry.Name()
+		if entry.IsDir() {
+			if db, err := NewDirDB(p, mmap); err != nil {
+				return nil, err
+			} else {
+				dbs = append(dbs, db)
+			}
+		}
+		if strings.HasSuffix(strings.ToLower(entry.Name()), ".bin") {
+			if db, err := NewFileDB(p, mmap); err != nil {
+				return nil, err
+			} else {
+				dbs = append(dbs, db)
+			}
+		}
+	}
+	return dbs, nil
+}
 func NewFileDB(path string, mmap bool) (IP2LocationDB, error) {
 	var err error
 	s, err := os.Stat(path)
 	if err != nil {
 		return nil, err
+	}
+	if s.IsDir() {
+		return NewDirDB(path, mmap)
 	}
 
 	db := &FileDB{}
