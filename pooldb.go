@@ -23,6 +23,7 @@ func (p *PoolDB) Query(ip string, r *Record, m QueryMode) error {
 		}
 	}
 	db := p.pool.Get().(IP2LocationDB)
+	defer p.pool.Put(db)
 	return db.Query(ip, r, m)
 }
 func (p *PoolDB) Close() {
