@@ -17,7 +17,7 @@ func (p *PoolDB) Query(ip string, r *Record, m QueryMode) error {
 				if db, err := p.Factory(); err == nil {
 					return db
 				} else {
-					return errorDB{err}
+					return &errorDB{err}
 				}
 			},
 		}
