@@ -37,4 +37,4 @@ type errorDB struct {
 func (e *errorDB) Query(string, *Record, QueryMode) error {
 	return e.Error
 }
-func (e errorDB) Close() {}
+func (e *errorDB) Close() {}
